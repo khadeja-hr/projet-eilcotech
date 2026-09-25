@@ -67,7 +67,7 @@ function genererReference(categorie, marque, version) {
 }
 
 // ============================================
-// US 2.1 - AJOUTER UN PRODUIT - IK
+// US 2.1 - AJOUTER UN PRODUIT - IK (TEST-49)
 // ============================================
 
 function ajouterProduit(produit) {
@@ -160,7 +160,7 @@ function mettreAJourMarques() {
 }
 
 // ============================================
-// SOUMISSION DU FORMULAIRE - IK
+// SOUMISSION DU FORMULAIRE - IK (TEST-49)
 // ============================================
 
 document.getElementById('form-ajout').addEventListener('submit', function(e) {
@@ -211,11 +211,56 @@ function getProduitParReference(reference) {
     return produits.find(p => p.reference === reference) || null;
 }
 
-function afficherProduits() {
-    const produits = getProduits();
-    const container = document.getElementById('liste-produits');
+// ============================================
+// TEST-57 - RECHERCHER UN PRODUIT - IK
+// ============================================
 
-    if (produits.length === 0) {
+/**
+ * Filtre les produits selon un mot-clé (insensible à la casse)
+ * Recherche dans : nom, marque, référence, catégorie, sous-catégorie
+ */
+function filtrerProduits(motCle) {
+    const produits = getProduits();
+
+    // Si pas de mot-clé, retourner tous les produits
+    if (!motCle || motCle.trim() === '') {
+        return produits;
+    }
+
+    const motCleNormalise = motCle.trim().toLowerCase();
+
+    return produits.filter(produit => {
+        const nom = (produit.nom || '').toLowerCase();
+        const marque = (produit.marque || '').toLowerCase();
+        const reference = (produit.reference || '').toLowerCase();
+        const categorie = (produit.categorie || '').toLowerCase();
+        const sousCategorie = (produit.sousCategorie || '').toLowerCase();
+
+        return nom.includes(motCleNormalise) ||
+               marque.includes(motCleNormalise) ||
+               reference.includes(motCleNormalise) ||
+               categorie.includes(motCleNormalise) ||
+               sousCategorie.includes(motCleNormalise);
+    });
+}
+
+/**
+ * Affiche la liste des produits (filtrée si un mot-clé est saisi)
+ */
+function afficherProduits(motCle = '') {
+    const produits = filtrerProduits(motCle);
+    const container = document.getElementById('liste-produits');
+    const compteur = document.getElementById('compteur-resultats');
+
+    // Mettre à jour le compteur
+    if (motCle && motCle.trim() !== '') {
+        compteur.textContent = `${produits.length} résultat(s) trouvé(s)`;
+    } else {
+        compteur.textContent = `${produits.length} produit(s) au total`;
+    }
+
+    // Aucun produit dans le catalogue
+    if (getProduits().length === 0) {
         container.innerHTML = `
             <div class="text-center text-gray-400 py-12">
                 <p class="text-5xl mb-3">📭</p>
@@ -226,6 +271,19 @@ function afficherProduits() {
         return;
     }
 
+    // Aucun résultat de recherche
+    if (produits.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-400 py-12">
+                <p class="text-5xl mb-3">🔍</p>
+                <p class="text-lg font-semibold">Aucun produit trouvé.</p>
+                <p class="text-sm">Essayez avec un autre mot-clé.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Afficher les produits
     container.innerHTML = produits.map(produit => `
         <div class="border-l-4 border-primary bg-gray-50 rounded-lg p-4 hover:shadow-md transition cursor-pointer"
              onclick="afficherDetail('${produit.reference}')">
@@ -256,7 +314,34 @@ function afficherProduits() {
 }
 
 // ============================================
-// AFFICHAGE DU DÉTAIL D'UN PRODUIT (Modal HTML)
+// GESTION DE LA RECHERCHE (TEST-57)
+// ============================================
+
+const champRecherche = document.getElementById('champ-recherche');
+const btnEffacerRecherche = document.getElementById('btn-effacer-recherche');
+
+// Recherche en temps réel (à chaque frappe)
+champRecherche.addEventListener('input', function() {
+    const motCle = this.value;
+    afficherProduits(motCle);
+
+    if (motCle.trim() !== '') {
+        btnEffacerRecherche.classList.remove('hidden');
+    } else {
+        btnEffacerRecherche.classList.add('hidden');
+    }
+});
+
+// Bouton "effacer la recherche"
+btnEffacerRecherche.addEventListener('click', function() {
+    champRecherche.value = '';
+    afficherProduits('');
+    this.classList.add('hidden');
+    champRecherche.focus();
+});
+
+// ============================================
+// AFFICHAGE DU DÉTAIL D'UN PRODUIT (Modal)
 // ============================================
 
 function afficherDetail(reference) {

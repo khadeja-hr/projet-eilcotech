@@ -32,7 +32,7 @@
     <main class="max-w-6xl mx-auto px-4 py-8">
 
         <!-- ============================================
-             SECTION AJOUTER UN PRODUIT (IK)
+             SECTION AJOUTER UN PRODUIT (IK - TEST-49)
              ============================================ -->
         <section class="bg-white rounded-xl shadow-md p-6 mb-8">
             <h2 class="text-2xl font-bold text-primary mb-6 border-b-2 border-gray-100 pb-3">
@@ -124,12 +124,28 @@
         </section>
 
         <!-- ============================================
-             SECTION LISTE DES PRODUITS (FB - TEST-50)
+             SECTION LISTE DES PRODUITS + RECHERCHE
+             (FB - TEST-50 + IK - TEST-57)
              ============================================ -->
         <section class="bg-white rounded-xl shadow-md p-6">
-            <h2 class="text-2xl font-bold text-primary mb-6 border-b-2 border-gray-100 pb-3">
-                📋 Liste des produits
-            </h2>
+            <div class="flex justify-between items-center mb-6 border-b-2 border-gray-100 pb-3">
+                <h2 class="text-2xl font-bold text-primary">
+                    📋 Liste des produits
+                </h2>
+                <span id="compteur-resultats" class="text-sm text-gray-500"></span>
+            </div>
+
+            <!-- Champ de recherche (TEST-57) -->
+            <div class="mb-4 relative">
+                <input type="text" id="champ-recherche"
+                       placeholder="Rechercher par nom, marque, référence, catégorie..."
+                       class="w-full px-4 py-3 pl-12 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔍</span>
+                <button id="btn-effacer-recherche"
+                        class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">
+                    ×
+                </button>
+            </div>
 
             <!-- Liste des produits -->
             <div id="liste-produits" class="space-y-3">
@@ -140,7 +156,7 @@
     </main>
 
     <!-- ============================================
-         MODAL DÉTAIL PRODUIT (FB - TEST-50)
+         MODAL DÉTAIL PRODUIT
          ============================================ -->
     <div id="modal-detail" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
