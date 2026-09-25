@@ -594,4 +594,4 @@ document.getElementById('form-modification').addEventListener('submit', function
 // ============================================
 
 afficherProduits();
-console.log('✅ Application démarrée');
+console.log(' Application démarrée');
