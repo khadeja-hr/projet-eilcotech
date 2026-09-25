@@ -73,23 +73,19 @@ function genererReference(categorie, marque, version) {
 function ajouterProduit(produit) {
     const produits = getProduits();
 
-    // Vérification 1 : Unicité de la référence
     if (produits.some(p => p.reference === produit.reference)) {
         return { success: false, message: `❌ La référence "${produit.reference}" existe déjà !` };
     }
 
-    // Vérification 2 : Quantité entre 0 et 10
     if (produit.quantite < 0 || produit.quantite > 10) {
         return { success: false, message: '❌ La quantité doit être comprise entre 0 et 10.' };
     }
 
-    // Vérification 3 : Cohérence marque/catégorie
     const marquesAutorisees = getMarquesAutorisees(produit.categorie, produit.sousCategorie);
     if (!marquesAutorisees.includes(produit.marque)) {
         return { success: false, message: `❌ La marque "${produit.marque}" n'est pas autorisée pour cette catégorie.` };
     }
 
-    // Vérification 4 : Maximum 5 produits par marque
     const nombreProduits = compterProduitsParMarque(
         produit.categorie,
         produit.sousCategorie,
@@ -99,10 +95,8 @@ function ajouterProduit(produit) {
         return { success: false, message: `❌ La marque "${produit.marque}" a déjà ${MAX_PRODUITS_PAR_MARQUE} produits (maximum autorisé).` };
     }
 
-    // Ajout du statut
     produit.statut = produit.quantite === 0 ? 'Rupture' : 'Disponible';
 
-    // Ajout du produit
     produits.push(produit);
     saveProduits(produits);
 
@@ -122,7 +116,7 @@ function afficherMessage(texte, type) {
 }
 
 // ============================================
-// GESTION DYNAMIQUE DU FORMULAIRE - IK
+// GESTION DYNAMIQUE DU FORMULAIRE (AJOUT) - IK
 // ============================================
 
 const selectCategorie = document.getElementById('categorie');
@@ -160,7 +154,7 @@ function mettreAJourMarques() {
 }
 
 // ============================================
-// SOUMISSION DU FORMULAIRE - IK (TEST-49)
+// SOUMISSION DU FORMULAIRE - IK
 // ============================================
 
 document.getElementById('form-ajout').addEventListener('submit', function(e) {
@@ -285,30 +279,44 @@ function afficherProduits(motCle = '') {
 
     // Afficher les produits
     container.innerHTML = produits.map(produit => `
-        <div class="border-l-4 border-primary bg-gray-50 rounded-lg p-4 hover:shadow-md transition cursor-pointer"
-             onclick="afficherDetail('${produit.reference}')">
+        <div class="border-l-4 border-primary bg-gray-50 rounded-lg p-4 hover:shadow-md transition">
 
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="text-lg font-bold text-gray-800">${produit.nom}</h3>
-                <span class="px-3 py-1 rounded-full text-xs font-bold ${
-                    produit.statut === 'Disponible'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                }">
-                    ${produit.statut}
-                </span>
+            <div onclick="afficherDetail('${produit.reference}')" class="cursor-pointer">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-lg font-bold text-gray-800">${produit.nom}</h3>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${
+                        produit.statut === 'Disponible'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                    }">
+                        ${produit.statut}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
+                    <div><span class="font-semibold text-gray-700">Marque :</span> <span>${produit.marque}</span></div>
+                    <div><span class="font-semibold text-gray-700">Catégorie :</span> <span>${produit.categorie}</span></div>
+                    ${produit.sousCategorie ? `<div><span class="font-semibold text-gray-700">Sous-catégorie :</span> <span>${produit.sousCategorie}</span></div>` : ''}
+                    <div><span class="font-semibold text-gray-700">Version :</span> <span>${produit.version}</span></div>
+                    <div><span class="font-semibold text-gray-700">Référence :</span> <span class="font-mono">${produit.reference}</span></div>
+                    <div><span class="font-semibold text-gray-700">Quantité :</span> <span class="font-bold">${produit.quantite}</span></div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
-                <div><span class="font-semibold text-gray-700">Marque :</span> <span>${produit.marque}</span></div>
-                <div><span class="font-semibold text-gray-700">Catégorie :</span> <span>${produit.categorie}</span></div>
-                ${produit.sousCategorie ? `<div><span class="font-semibold text-gray-700">Sous-catégorie :</span> <span>${produit.sousCategorie}</span></div>` : ''}
-                <div><span class="font-semibold text-gray-700">Version :</span> <span>${produit.version}</span></div>
-                <div><span class="font-semibold text-gray-700">Référence :</span> <span class="font-mono">${produit.reference}</span></div>
-                <div><span class="font-semibold text-gray-700">Quantité :</span> <span class="font-bold">${produit.quantite}</span></div>
+            <div class="flex gap-2 mt-3 pt-3 border-t border-gray-200">
+                <button onclick="afficherDetail('${produit.reference}')"
+                        class="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition">
+                    👁️ Détail
+                </button>
+                <button onclick="ouvrirModification('${produit.reference}')"
+                        class="px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition">
+                    ✏️ Modifier
+                </button>
+                <button onclick="ouvrirConfirmationSuppression('${produit.reference}')"
+                        class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition">
+                    🗑️ Supprimer
+                </button>
             </div>
-
-            <p class="text-xs text-gray-400 mt-2 italic">👆 Cliquer pour voir le détail</p>
         </div>
     `).join('');
 }
@@ -389,23 +397,190 @@ function afficherDetail(reference) {
                 <span class="text-gray-800 font-bold text-lg">${produit.quantite}</span>
             </div>
         </div>
+
+        <div class="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+            <button onclick="fermerModal(); ouvrirModification('${produit.reference}');"
+                    class="px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition">
+                ✏️ Modifier
+            </button>
+            <button onclick="fermerModal(); ouvrirConfirmationSuppression('${produit.reference}');"
+                    class="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition">
+                🗑️ Supprimer
+            </button>
+        </div>
     `;
 
     document.getElementById('modal-detail').classList.remove('hidden');
 }
 
 // ============================================
-// FERMER LE MODAL
+// FERMER LE MODAL DÉTAIL
 // ============================================
 
 function fermerModal() {
     document.getElementById('modal-detail').classList.add('hidden');
 }
 
-// Fermer le modal en cliquant en dehors
 document.getElementById('modal-detail').addEventListener('click', function(e) {
     if (e.target === this) {
         fermerModal();
+    }
+});
+
+// ============================================
+// TEST-53 - SUPPRIMER UN PRODUIT - FB
+// ============================================
+
+function ouvrirConfirmationSuppression(reference) {
+    const produit = getProduitParReference(reference);
+
+    if (!produit) {
+        afficherMessage('❌ Produit introuvable.', 'error');
+        return;
+    }
+
+    const infoDiv = document.getElementById('modal-suppression-info');
+    infoDiv.innerHTML = `
+        <p class="text-gray-800"><strong>Nom :</strong> ${produit.nom}</p>
+        <p class="text-gray-800 mt-1"><strong>Référence :</strong> <span class="font-mono">${produit.reference}</span></p>
+    `;
+
+    document.getElementById('btn-confirmer-suppression').dataset.reference = reference;
+    document.getElementById('modal-suppression').classList.remove('hidden');
+}
+
+function fermerModalSuppression() {
+    document.getElementById('modal-suppression').classList.add('hidden');
+}
+
+function confirmerSuppression() {
+    const reference = document.getElementById('btn-confirmer-suppression').dataset.reference;
+
+    if (!reference) {
+        afficherMessage('❌ Aucune référence à supprimer.', 'error');
+        fermerModalSuppression();
+        return;
+    }
+
+    const produits = getProduits();
+    const produit = produits.find(p => p.reference === reference);
+
+    if (!produit) {
+        afficherMessage('❌ Produit introuvable.', 'error');
+        fermerModalSuppression();
+        return;
+    }
+
+    const nouveauxProduits = produits.filter(p => p.reference !== reference);
+    saveProduits(nouveauxProduits);
+    fermerModalSuppression();
+    afficherMessage(`✅ Produit "${produit.nom}" (${produit.reference}) supprimé avec succès.`, 'success');
+    afficherProduits();
+}
+
+document.getElementById('btn-confirmer-suppression').addEventListener('click', confirmerSuppression);
+
+document.getElementById('modal-suppression').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fermerModalSuppression();
+    }
+});
+
+// ============================================
+// TEST-52 - MODIFIER UN PRODUIT - FB
+// ============================================
+
+/**
+ * Ouvre le modal de modification pour un produit
+ */
+function ouvrirModification(reference) {
+    const produit = getProduitParReference(reference);
+
+    if (!produit) {
+        afficherMessage('❌ Produit introuvable.', 'error');
+        return;
+    }
+
+    // Remplir le formulaire avec les infos actuelles
+    document.getElementById('mod-reference-originale').value = produit.reference;
+    document.getElementById('mod-categorie').value = produit.categorie;
+    document.getElementById('mod-nom').value = produit.nom;
+    document.getElementById('mod-version').value = produit.version;
+    document.getElementById('mod-reference').value = produit.reference;
+    document.getElementById('mod-quantite').value = produit.quantite;
+
+    // Gérer la sous-catégorie
+    const modDivSousCategorie = document.getElementById('mod-div-sous-categorie');
+    const modSousCategorie = document.getElementById('mod-sousCategorie');
+
+    if (produit.categorie === 'Électroménagers') {
+        modDivSousCategorie.classList.remove('hidden');
+        modSousCategorie.required = true;
+        modSousCategorie.value = produit.sousCategorie || '';
+    } else {
+        modDivSousCategorie.classList.add('hidden');
+        modSousCategorie.required = false;
+        modSousCategorie.value = '';
+    }
+
+    // Mettre à jour les marques
+    mettreAJourMarquesModification();
+    document.getElementById('mod-marque').value = produit.marque;
+
+    // Afficher le modal
+    document.getElementById('modal-modification').classList.remove('hidden');
+}
+
+/**
+ * Met à jour les marques dans le formulaire de modification
+ */
+function mettreAJourMarquesModification() {
+    const categorie = document.getElementById('mod-categorie').value;
+    const sousCategorie = document.getElementById('mod-sousCategorie').value;
+    const selectMarqueMod = document.getElementById('mod-marque');
+
+    selectMarqueMod.innerHTML = '<option value="">-- Choisir --</option>';
+    if (!categorie) return;
+
+    const marques = getMarquesAutorisees(categorie, sousCategorie);
+    marques.forEach(marque => {
+        const option = document.createElement('option');
+        option.value = marque;
+        option.textContent = marque;
+        selectMarqueMod.appendChild(option);
+    });
+}
+
+/**
+ * Ferme le modal de modification
+ */
+function fermerModalModification() {
+    document.getElementById('modal-modification').classList.add('hidden');
+}
+
+// Gestion dynamique du formulaire de modification
+document.getElementById('mod-categorie').addEventListener('change', function() {
+    const categorie = this.value;
+    const modDivSousCategorie = document.getElementById('mod-div-sous-categorie');
+    const modSousCategorie = document.getElementById('mod-sousCategorie');
+
+    if (categorie === 'Électroménagers') {
+        modDivSousCategorie.classList.remove('hidden');
+        modSousCategorie.required = true;
+    } else {
+        modDivSousCategorie.classList.add('hidden');
+        modSousCategorie.required = false;
+        modSousCategorie.value = '';
+    }
+    mettreAJourMarquesModification();
+});
+
+document.getElementById('mod-sousCategorie').addEventListener('change', mettreAJourMarquesModification);
+
+// Fermer le modal de modification en cliquant en dehors
+document.getElementById('modal-modification').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fermerModalModification();
     }
 });
 
@@ -413,7 +588,90 @@ document.getElementById('modal-detail').addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         fermerModal();
+        fermerModalSuppression();
+        fermerModalModification();
     }
+});
+
+// ============================================
+// SOUMISSION DU FORMULAIRE DE MODIFICATION
+// ============================================
+
+document.getElementById('form-modification').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const referenceOriginale = document.getElementById('mod-reference-originale').value;
+    const categorie = document.getElementById('mod-categorie').value;
+    const sousCategorie = document.getElementById('mod-sousCategorie').value;
+    const marque = document.getElementById('mod-marque').value;
+    const nom = document.getElementById('mod-nom').value.trim();
+    const version = document.getElementById('mod-version').value.trim();
+    const reference = document.getElementById('mod-reference').value.trim();
+    const quantite = parseInt(document.getElementById('mod-quantite').value);
+
+    // Vérifier que tous les champs sont remplis
+    if (!categorie || !marque || !nom || !version || !reference || isNaN(quantite)) {
+        afficherMessage('❌ Veuillez remplir tous les champs.', 'error');
+        return;
+    }
+
+    // Vérifier la sous-catégorie pour électroménager
+    if (categorie === 'Électroménagers' && !sousCategorie) {
+        afficherMessage('❌ Veuillez choisir une sous-catégorie.', 'error');
+        return;
+    }
+
+    // Vérifier la quantité
+    if (quantite < 0 || quantite > 10) {
+        afficherMessage('❌ La quantité doit être comprise entre 0 et 10.', 'error');
+        return;
+    }
+
+    // Vérifier l'unicité de la référence (si elle a changé)
+    const produits = getProduits();
+    if (reference !== referenceOriginale) {
+        if (produits.some(p => p.reference === reference)) {
+            afficherMessage(`❌ La référence "${reference}" existe déjà !`, 'error');
+            return;
+        }
+    }
+
+    // Vérifier la cohérence marque/catégorie
+    const marquesAutorisees = getMarquesAutorisees(categorie, sousCategorie);
+    if (!marquesAutorisees.includes(marque)) {
+        afficherMessage(`❌ La marque "${marque}" n'est pas autorisée pour cette catégorie.`, 'error');
+        return;
+    }
+
+    // Trouver le produit à modifier
+    const index = produits.findIndex(p => p.reference === referenceOriginale);
+    if (index === -1) {
+        afficherMessage('❌ Produit introuvable.', 'error');
+        return;
+    }
+
+    // Mettre à jour le produit
+    produits[index] = {
+        nom,
+        marque,
+        categorie,
+        sousCategorie: categorie === 'Électroménagers' ? sousCategorie : null,
+        version,
+        reference,
+        quantite,
+        statut: quantite === 0 ? 'Rupture' : 'Disponible'
+    };
+
+    saveProduits(produits);
+
+    // Fermer le modal
+    fermerModalModification();
+
+    // Message de confirmation
+    afficherMessage(`✅ Produit "${nom}" modifié avec succès !`, 'success');
+
+    // Actualiser la liste
+    afficherProduits();
 });
 
 // ============================================
