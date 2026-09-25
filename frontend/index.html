@@ -31,7 +31,9 @@
     <!-- MAIN -->
     <main class="max-w-6xl mx-auto px-4 py-8">
 
-        <!-- SECTION AJOUTER UN PRODUIT -->
+        <!-- ============================================
+             SECTION AJOUTER UN PRODUIT (IK)
+             ============================================ -->
         <section class="bg-white rounded-xl shadow-md p-6 mb-8">
             <h2 class="text-2xl font-bold text-primary mb-6 border-b-2 border-gray-100 pb-3">
                 ➕ Ajouter un produit
@@ -121,7 +123,51 @@
             <div id="message" class="mt-4 hidden"></div>
         </section>
 
+        <!-- ============================================
+             SECTION LISTE DES PRODUITS (FB - TEST-50)
+             ============================================ -->
+        <section class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-2xl font-bold text-primary mb-6 border-b-2 border-gray-100 pb-3">
+                📋 Liste des produits
+            </h2>
+
+            <!-- Liste des produits -->
+            <div id="liste-produits" class="space-y-3">
+                <!-- Les produits seront affichés ici par JavaScript -->
+            </div>
+        </section>
+
     </main>
+
+    <!-- ============================================
+         MODAL DÉTAIL PRODUIT (FB - TEST-50)
+         ============================================ -->
+    <div id="modal-detail" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+
+            <!-- En-tête du modal -->
+            <div class="bg-gradient-to-r from-primary to-secondary text-white p-4 rounded-t-xl flex justify-between items-center">
+                <h3 class="text-xl font-bold">📦 Détail du produit</h3>
+                <button onclick="fermerModal()"
+                        class="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-8 h-8 flex items-center justify-center text-2xl transition">
+                    ×
+                </button>
+            </div>
+
+            <!-- Contenu du modal -->
+            <div id="modal-contenu" class="p-6">
+                <!-- Le contenu sera rempli par JavaScript -->
+            </div>
+
+            <!-- Pied du modal -->
+            <div class="bg-gray-50 p-4 rounded-b-xl flex justify-end">
+                <button onclick="fermerModal()"
+                        class="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:opacity-90 transition">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
 
     <footer class="text-center text-gray-500 text-sm py-6">
         EILCO Tech - Projet Scrum - 2026

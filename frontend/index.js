@@ -1,4 +1,6 @@
-
+// ============================================
+// BASE DE DONNÉES (localStorage) - IK
+// ============================================
 
 const STORAGE_KEY = 'itec_produits';
 
@@ -11,7 +13,9 @@ function saveProduits(produits) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(produits));
 }
 
-
+// ============================================
+// RÈGLES MÉTIER - IK
+// ============================================
 
 const MARQUES_PAR_CATEGORIE = {
     'Smartphones': ['Apple', 'Samsung', 'Huawei'],
@@ -62,7 +66,9 @@ function genererReference(categorie, marque, version) {
     return `${prefixeRef}${String(prochainNumero).padStart(3, '0')}`;
 }
 
-
+// ============================================
+// US 2.1 - AJOUTER UN PRODUIT - IK
+// ============================================
 
 function ajouterProduit(produit) {
     const produits = getProduits();
@@ -115,7 +121,9 @@ function afficherMessage(texte, type) {
     setTimeout(() => messageDiv.classList.add('hidden'), 5000);
 }
 
-
+// ============================================
+// GESTION DYNAMIQUE DU FORMULAIRE - IK
+// ============================================
 
 const selectCategorie = document.getElementById('categorie');
 const selectSousCategorie = document.getElementById('sousCategorie');
@@ -151,6 +159,9 @@ function mettreAJourMarques() {
     });
 }
 
+// ============================================
+// SOUMISSION DU FORMULAIRE - IK
+// ============================================
 
 document.getElementById('form-ajout').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -187,7 +198,142 @@ document.getElementById('form-ajout').addEventListener('submit', function(e) {
         this.reset();
         divSousCategorie.classList.add('hidden');
         selectMarque.innerHTML = '<option value="">-- Choisir une catégorie d\'abord --</option>';
+        afficherProduits();
     }
 });
 
+// ============================================
+// TEST-50 - CONSULTER LES PRODUITS - FB
+// ============================================
+
+function getProduitParReference(reference) {
+    const produits = getProduits();
+    return produits.find(p => p.reference === reference) || null;
+}
+
+function afficherProduits() {
+    const produits = getProduits();
+    const container = document.getElementById('liste-produits');
+
+    if (produits.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-400 py-12">
+                <p class="text-5xl mb-3">📭</p>
+                <p class="text-lg">Aucun produit dans le catalogue.</p>
+                <p class="text-sm">Ajoutez votre premier produit ci-dessus.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = produits.map(produit => `
+        <div class="border-l-4 border-primary bg-gray-50 rounded-lg p-4 hover:shadow-md transition cursor-pointer"
+             onclick="afficherDetail('${produit.reference}')">
+
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="text-lg font-bold text-gray-800">${produit.nom}</h3>
+                <span class="px-3 py-1 rounded-full text-xs font-bold ${
+                    produit.statut === 'Disponible'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                }">
+                    ${produit.statut}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
+                <div><span class="font-semibold text-gray-700">Marque :</span> <span>${produit.marque}</span></div>
+                <div><span class="font-semibold text-gray-700">Catégorie :</span> <span>${produit.categorie}</span></div>
+                ${produit.sousCategorie ? `<div><span class="font-semibold text-gray-700">Sous-catégorie :</span> <span>${produit.sousCategorie}</span></div>` : ''}
+                <div><span class="font-semibold text-gray-700">Version :</span> <span>${produit.version}</span></div>
+                <div><span class="font-semibold text-gray-700">Référence :</span> <span class="font-mono">${produit.reference}</span></div>
+                <div><span class="font-semibold text-gray-700">Quantité :</span> <span class="font-bold">${produit.quantite}</span></div>
+            </div>
+
+            <p class="text-xs text-gray-400 mt-2 italic">👆 Cliquer pour voir le détail</p>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// AFFICHAGE DU DÉTAIL D'UN PRODUIT (Modal HTML)
+// ============================================
+
+function afficherDetail(reference) {
+    const produit = getProduitParReference(reference);
+    if (!produit) return;
+
+    const contenu = document.getElementById('modal-contenu');
+    contenu.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+            <h4 class="text-2xl font-bold text-gray-800">${produit.nom}</h4>
+            <span class="px-3 py-1 rounded-full text-xs font-bold ${
+                produit.statut === 'Disponible'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+            }">
+                ${produit.statut}
+            </span>
+        </div>
+
+        <div class="space-y-3">
+            <div class="flex border-b border-gray-100 pb-2">
+                <span class="w-40 font-semibold text-gray-600">Marque</span>
+                <span class="text-gray-800">${produit.marque}</span>
+            </div>
+            <div class="flex border-b border-gray-100 pb-2">
+                <span class="w-40 font-semibold text-gray-600">Catégorie</span>
+                <span class="text-gray-800">${produit.categorie}</span>
+            </div>
+            ${produit.sousCategorie ? `
+            <div class="flex border-b border-gray-100 pb-2">
+                <span class="w-40 font-semibold text-gray-600">Sous-catégorie</span>
+                <span class="text-gray-800">${produit.sousCategorie}</span>
+            </div>
+            ` : ''}
+            <div class="flex border-b border-gray-100 pb-2">
+                <span class="w-40 font-semibold text-gray-600">Version</span>
+                <span class="text-gray-800">${produit.version}</span>
+            </div>
+            <div class="flex border-b border-gray-100 pb-2">
+                <span class="w-40 font-semibold text-gray-600">Référence</span>
+                <span class="text-gray-800 font-mono">${produit.reference}</span>
+            </div>
+            <div class="flex border-b border-gray-100 pb-2">
+                <span class="w-40 font-semibold text-gray-600">Quantité en stock</span>
+                <span class="text-gray-800 font-bold text-lg">${produit.quantite}</span>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('modal-detail').classList.remove('hidden');
+}
+
+// ============================================
+// FERMER LE MODAL
+// ============================================
+
+function fermerModal() {
+    document.getElementById('modal-detail').classList.add('hidden');
+}
+
+// Fermer le modal en cliquant en dehors
+document.getElementById('modal-detail').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fermerModal();
+    }
+});
+
+// Fermer avec la touche Échap
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        fermerModal();
+    }
+});
+
+// ============================================
+// INITIALISATION
+// ============================================
+
+afficherProduits();
 console.log('✅ Application démarrée');
