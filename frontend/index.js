@@ -41,22 +41,11 @@ function clearSession() {
     localStorage.removeItem(SESSION_KEY);
 }
 
-/**
- * Vérifie si l'email est valide
- */
 function validerEmail(email) {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
 }
 
-/**
- * Vérifie si le mot de passe est valide :
- * - Au moins 8 caractères
- * - Au moins 1 majuscule
- * - Au moins 1 minuscule
- * - Au moins 1 chiffre
- * - Au moins 1 caractère spécial
- */
 function validerMotDePasse(mdp) {
     if (mdp.length < 8) return false;
     if (!/[A-Z]/.test(mdp)) return false;
@@ -66,22 +55,16 @@ function validerMotDePasse(mdp) {
     return true;
 }
 
-/**
- * TEST-69 - Crée un nouveau compte
- */
 function creerCompte(email, password, passwordConfirm) {
     if (!email || !password || !passwordConfirm) {
         return { success: false, message: '❌ Veuillez remplir tous les champs.' };
     }
-
     if (!validerEmail(email)) {
         return { success: false, message: '❌ Veuillez saisir une adresse email valide.' };
     }
-
     if (password !== passwordConfirm) {
         return { success: false, message: '❌ Les deux mots de passe ne correspondent pas.' };
     }
-
     if (!validerMotDePasse(password)) {
         return {
             success: false,
@@ -105,32 +88,22 @@ function creerCompte(email, password, passwordConfirm) {
     return { success: true, message: '✅ Compte créé avec succès ! Vous pouvez maintenant vous connecter.' };
 }
 
-/**
- * TEST-70 - Connecte un utilisateur
- */
 function connecter(email, password) {
     if (!email || !password) {
         return { success: false, message: '❌ Veuillez remplir tous les champs.' };
     }
-
     const users = getUsers();
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
     if (!user) {
         return { success: false, message: '❌ Email ou mot de passe incorrect.' };
     }
-
     if (user.password !== password) {
         return { success: false, message: '❌ Email ou mot de passe incorrect.' };
     }
-
     saveSession({ email: user.email });
     return { success: true, message: '✅ Connexion réussie !' };
 }
 
-/**
- * Déconnecte l'utilisateur
- */
 function seDeconnecter() {
     clearSession();
     afficherPageAuth();
@@ -506,6 +479,8 @@ function afficherProduits(motCle = '') {
                         class="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition">👁️ Détail</button>
                 <button onclick="ouvrirModification('${produit.reference}')"
                         class="px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition">✏️ Modifier</button>
+                <button onclick="ouvrirSortieStock('${produit.reference}')"
+                        class="px-3 py-1 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 transition">📤 Sortie</button>
                 <button onclick="ouvrirConfirmationSuppression('${produit.reference}')"
                         class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition">🗑️ Supprimer</button>
             </div>
@@ -719,11 +694,12 @@ document.addEventListener('keydown', function(e) {
         fermerModal();
         fermerModalSuppression();
         fermerModalModification();
+        fermerModalSortie();
     }
 });
 
 // ============================================
-// RÉAPPROVISIONNEMENT
+// RÉAPPROVISIONNEMENT (TEST-64)
 // ============================================
 
 document.getElementById('btn-reapprovisionner').addEventListener('click', function() {
@@ -761,6 +737,97 @@ document.getElementById('btn-reapprovisionner').addEventListener('click', functi
 
     afficherMessage(`✅ Réapprovisionnement réussi ! Nouvelle quantité : ${nouvelleQuantite}`, 'success');
     afficherProduits();
+});
+
+// ============================================
+// SORTIE DE STOCK (TEST-66)
+// ============================================
+
+function ouvrirSortieStock(reference) {
+    const produit = getProduitParReference(reference);
+
+    if (!produit) {
+        afficherMessage('❌ Produit introuvable.', 'error');
+        return;
+    }
+
+    if (produit.quantite === 0) {
+        afficherMessage('❌ Ce produit est déjà en rupture de stock.', 'error');
+        return;
+    }
+
+    const infoDiv = document.getElementById('modal-sortie-info');
+    infoDiv.innerHTML = `
+        <p class="text-gray-800"><strong>Nom :</strong> ${produit.nom} - ${produit.version}</p>
+        <p class="text-gray-800 mt-1"><strong>Référence :</strong> <span class="font-mono">${produit.reference}</span></p>
+        <p class="text-gray-800 mt-1"><strong>Quantité actuelle :</strong> <span class="font-bold text-orange-600">${produit.quantite}</span></p>
+    `;
+
+    const inputSortie = document.getElementById('sortie-quantite');
+    inputSortie.value = '';
+    inputSortie.max = produit.quantite;
+
+    document.getElementById('btn-confirmer-sortie').dataset.reference = reference;
+    document.getElementById('modal-sortie').classList.remove('hidden');
+}
+
+function fermerModalSortie() {
+    document.getElementById('modal-sortie').classList.add('hidden');
+}
+
+function confirmerSortieStock() {
+    const reference = document.getElementById('btn-confirmer-sortie').dataset.reference;
+    const quantiteASortir = parseInt(document.getElementById('sortie-quantite').value);
+
+    if (!reference) {
+        afficherMessage('❌ Aucune référence.', 'error');
+        fermerModalSortie();
+        return;
+    }
+
+    if (isNaN(quantiteASortir) || quantiteASortir < 1) {
+        afficherMessage('❌ Veuillez saisir une quantité valide.', 'error');
+        return;
+    }
+
+    const produits = getProduits();
+    const index = produits.findIndex(p => p.reference === reference);
+
+    if (index === -1) {
+        afficherMessage('❌ Produit introuvable.', 'error');
+        fermerModalSortie();
+        return;
+    }
+
+    const produit = produits[index];
+
+    if (quantiteASortir > produit.quantite) {
+        afficherMessage(`❌ Impossible de sortir ${quantiteASortir} unités. Stock disponible : ${produit.quantite}.`, 'error');
+        return;
+    }
+
+    const nouvelleQuantite = produit.quantite - quantiteASortir;
+
+    produits[index].quantite = nouvelleQuantite;
+    produits[index].statut = calculerStatut(nouvelleQuantite);
+    saveProduits(produits);
+    fermerModalSortie();
+
+    if (nouvelleQuantite === 0) {
+        afficherMessage(`📤 Sortie de ${quantiteASortir} unité(s) effectuée. ⚠️ Le produit est maintenant en RUPTURE DE STOCK.`, 'success');
+    } else {
+        afficherMessage(`✅ Sortie de ${quantiteASortir} unité(s) effectuée. Nouvelle quantité : ${nouvelleQuantite} (${produits[index].statut})`, 'success');
+    }
+
+    afficherProduits();
+}
+
+document.getElementById('btn-confirmer-sortie').addEventListener('click', confirmerSortieStock);
+
+document.getElementById('modal-sortie').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fermerModalSortie();
+    }
 });
 
 // ============================================
@@ -836,7 +903,6 @@ document.getElementById('form-modification').addEventListener('submit', function
 // GESTION DES FORMULAIRES D'AUTHENTIFICATION
 // ============================================
 
-// Soumission CONNEXION (TEST-70)
 document.getElementById('form-connexion').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -853,7 +919,6 @@ document.getElementById('form-connexion').addEventListener('submit', function(e)
     }
 });
 
-// Soumission INSCRIPTION (TEST-69)
 document.getElementById('form-inscription').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -881,7 +946,6 @@ document.getElementById('form-inscription').addEventListener('submit', function(
 
 recalculerStatutsExistants();
 
-// Vérifier si l'utilisateur est déjà connecté
 const session = getSession();
 if (session) {
     afficherPageApp(session.email);
