@@ -100,9 +100,6 @@ function getClassesStatut(statut) {
 // ============================================
 // TEST-63 - RECALCUL DES STATUTS EXISTANTS
 // ============================================
-// Recalcule le statut de tous les produits au chargement
-// pour corriger les anciens statuts ('Disponible' / 'Rupture')
-// ============================================
 
 function recalculerStatutsExistants() {
     const produits = getProduits();
@@ -124,6 +121,7 @@ function recalculerStatutsExistants() {
 
 // ============================================
 // US 2.1 - AJOUTER UN PRODUIT - IK (TEST-49)
+// TEST-67 : Unicité (nom + version)
 // ============================================
 
 function ajouterProduit(produit) {
@@ -132,6 +130,19 @@ function ajouterProduit(produit) {
     // Vérification 1 : Unicité de la référence
     if (produits.some(p => p.reference === produit.reference)) {
         return { success: false, message: `❌ La référence "${produit.reference}" existe déjà !` };
+    }
+
+    // ⚠️ TEST-67 : Unicité du couple (nom + version)
+    const doublon = produits.find(p =>
+        p.nom.toLowerCase() === produit.nom.toLowerCase() &&
+        p.version.toLowerCase() === produit.version.toLowerCase()
+    );
+
+    if (doublon) {
+        return {
+            success: false,
+            message: `❌ Le produit "${produit.nom}" avec la version "${produit.version}" existe déjà !`
+        };
     }
 
     // TEST-62 : Quantité entre 1 et 10 (0 INTERDIT)
@@ -158,13 +169,13 @@ function ajouterProduit(produit) {
         return { success: false, message: `❌ La marque "${produit.marque}" a déjà ${MAX_PRODUITS_PAR_MARQUE} produits (maximum autorisé).` };
     }
 
-    // TEST-63 : Calcul du statut selon la quantité
+    // TEST-63 : Calcul du statut
     produit.statut = calculerStatut(produit.quantite);
 
     produits.push(produit);
     saveProduits(produits);
 
-    return { success: true, message: `✅ Produit "${produit.nom}" ajouté avec succès ! Référence : ${produit.reference}` };
+    return { success: true, message: `✅ Produit "${produit.nom} - ${produit.version}" ajouté avec succès !` };
 }
 
 function afficherMessage(texte, type) {
@@ -304,14 +315,21 @@ function filtrerProduits(motCle) {
         const reference = (produit.reference || '').toLowerCase();
         const categorie = (produit.categorie || '').toLowerCase();
         const sousCategorie = (produit.sousCategorie || '').toLowerCase();
+        const version = (produit.version || '').toLowerCase();
 
         return nom.includes(motCleNormalise) ||
                marque.includes(motCleNormalise) ||
                reference.includes(motCleNormalise) ||
                categorie.includes(motCleNormalise) ||
-               sousCategorie.includes(motCleNormalise);
+               sousCategorie.includes(motCleNormalise) ||
+               version.includes(motCleNormalise);
     });
 }
+
+// ============================================
+// AFFICHAGE DES PRODUITS
+// TEST-67 : Affiche "nom - version" dans la liste
+// ============================================
 
 function afficherProduits(motCle = '') {
     const produits = filtrerProduits(motCle);
@@ -351,7 +369,10 @@ function afficherProduits(motCle = '') {
 
             <div onclick="afficherDetail('${produit.reference}')" class="cursor-pointer">
                 <div class="flex justify-between items-start mb-2">
-                    <h3 class="text-lg font-bold text-gray-800">${produit.nom}</h3>
+                    <!-- TEST-67 : Affichage "Nom - Version" -->
+                    <h3 class="text-lg font-bold text-gray-800">
+                        ${produit.nom} <span class="text-primary">- ${produit.version}</span>
+                    </h3>
                     <span class="px-3 py-1 rounded-full text-xs font-bold ${getClassesStatut(produit.statut)}">
                         ${produit.statut}
                     </span>
@@ -361,7 +382,6 @@ function afficherProduits(motCle = '') {
                     <div><span class="font-semibold text-gray-700">Marque :</span> <span>${produit.marque}</span></div>
                     <div><span class="font-semibold text-gray-700">Catégorie :</span> <span>${produit.categorie}</span></div>
                     ${produit.sousCategorie ? `<div><span class="font-semibold text-gray-700">Sous-catégorie :</span> <span>${produit.sousCategorie}</span></div>` : ''}
-                    <div><span class="font-semibold text-gray-700">Version :</span> <span>${produit.version}</span></div>
                     <div><span class="font-semibold text-gray-700">Référence :</span> <span class="font-mono">${produit.reference}</span></div>
                     <div><span class="font-semibold text-gray-700">Quantité :</span> <span class="font-bold">${produit.quantite}</span></div>
                 </div>
@@ -421,7 +441,10 @@ function afficherDetail(reference) {
     const contenu = document.getElementById('modal-contenu');
     contenu.innerHTML = `
         <div class="flex justify-between items-start mb-4">
-            <h4 class="text-2xl font-bold text-gray-800">${produit.nom}</h4>
+            <!-- TEST-67 : Affichage "Nom - Version" -->
+            <h4 class="text-2xl font-bold text-gray-800">
+                ${produit.nom} <span class="text-primary">- ${produit.version}</span>
+            </h4>
             <span class="px-3 py-1 rounded-full text-xs font-bold ${getClassesStatut(produit.statut)}">
                 ${produit.statut}
             </span>
@@ -499,7 +522,7 @@ function ouvrirConfirmationSuppression(reference) {
 
     const infoDiv = document.getElementById('modal-suppression-info');
     infoDiv.innerHTML = `
-        <p class="text-gray-800"><strong>Nom :</strong> ${produit.nom}</p>
+        <p class="text-gray-800"><strong>Nom :</strong> ${produit.nom} - ${produit.version}</p>
         <p class="text-gray-800 mt-1"><strong>Référence :</strong> <span class="font-mono">${produit.reference}</span></p>
     `;
 
@@ -532,7 +555,7 @@ function confirmerSuppression() {
     const nouveauxProduits = produits.filter(p => p.reference !== reference);
     saveProduits(nouveauxProduits);
     fermerModalSuppression();
-    afficherMessage(`✅ Produit "${produit.nom}" (${produit.reference}) supprimé avec succès.`, 'success');
+    afficherMessage(`✅ Produit "${produit.nom} - ${produit.version}" supprimé avec succès.`, 'success');
     afficherProduits();
 }
 
@@ -557,7 +580,6 @@ function ouvrirModification(reference) {
         return;
     }
 
-    // Remplir les champs
     document.getElementById('mod-reference-originale').value = produit.reference;
     document.getElementById('mod-categorie').value = produit.categorie;
     document.getElementById('mod-nom').value = produit.nom;
@@ -581,7 +603,6 @@ function ouvrirModification(reference) {
         inputReappro.value = '';
     }
 
-    // Gérer la sous-catégorie
     const modDivSousCategorie = document.getElementById('mod-div-sous-categorie');
     const modSousCategorie = document.getElementById('mod-sousCategorie');
 
@@ -683,16 +704,13 @@ document.getElementById('btn-reapprovisionner').addEventListener('click', functi
         return;
     }
 
-    // Mettre à jour
     produits[index].quantite = nouvelleQuantite;
     produits[index].statut = calculerStatut(nouvelleQuantite);
 
     saveProduits(produits);
 
-    // Mettre à jour l'affichage
     document.getElementById('mod-quantite').value = nouvelleQuantite;
 
-    // Cacher le bouton si la quantité n'est plus 0
     if (nouvelleQuantite > 0) {
         document.getElementById('div-reapprovisionner').classList.add('hidden');
     }
@@ -704,7 +722,7 @@ document.getElementById('btn-reapprovisionner').addEventListener('click', functi
 
 // ============================================
 // SOUMISSION DU FORMULAIRE DE MODIFICATION
-// TEST-64 : Ne touche PAS à la quantité
+// TEST-67 : Vérification unicité (nom + version) à la modification
 // ============================================
 
 document.getElementById('form-modification').addEventListener('submit', function(e) {
@@ -718,7 +736,6 @@ document.getElementById('form-modification').addEventListener('submit', function
     const version = document.getElementById('mod-version').value.trim();
     const reference = document.getElementById('mod-reference').value.trim();
 
-    // Vérifier les champs texte
     if (!categorie || !marque || !nom || !version || !reference) {
         afficherMessage('❌ Veuillez remplir tous les champs.', 'error');
         return;
@@ -730,11 +747,25 @@ document.getElementById('form-modification').addEventListener('submit', function
     }
 
     const produits = getProduits();
+
+    // Vérifier l'unicité de la référence (si changée)
     if (reference !== referenceOriginale) {
         if (produits.some(p => p.reference === reference)) {
             afficherMessage(`❌ La référence "${reference}" existe déjà !`, 'error');
             return;
         }
+    }
+
+    // ⚠️ TEST-67 : Vérifier l'unicité (nom + version) à la modification
+    const doublon = produits.find(p =>
+        p.reference !== referenceOriginale &&
+        p.nom.toLowerCase() === nom.toLowerCase() &&
+        p.version.toLowerCase() === version.toLowerCase()
+    );
+
+    if (doublon) {
+        afficherMessage(`❌ Le produit "${nom} - ${version}" existe déjà dans le catalogue !`, 'error');
+        return;
     }
 
     const marquesAutorisees = getMarquesAutorisees(categorie, sousCategorie);
@@ -749,7 +780,6 @@ document.getElementById('form-modification').addEventListener('submit', function
         return;
     }
 
-    // TEST-64 : Garder la quantité et le statut actuels
     const produitExistant = produits[index];
 
     produits[index] = {
@@ -759,13 +789,13 @@ document.getElementById('form-modification').addEventListener('submit', function
         sousCategorie: categorie === 'Électroménagers' ? sousCategorie : null,
         version,
         reference,
-        quantite: produitExistant.quantite,  // ← Inchangée
-        statut: produitExistant.statut        // ← Inchangé
+        quantite: produitExistant.quantite,
+        statut: produitExistant.statut
     };
 
     saveProduits(produits);
     fermerModalModification();
-    afficherMessage(`✅ Produit "${nom}" modifié avec succès !`, 'success');
+    afficherMessage(`✅ Produit "${nom} - ${version}" modifié avec succès !`, 'success');
     afficherProduits();
 });
 
@@ -773,8 +803,6 @@ document.getElementById('form-modification').addEventListener('submit', function
 // INITIALISATION
 // ============================================
 
-// TEST-63 : Recalculer les statuts AVANT d'afficher
 recalculerStatutsExistants();
-
 afficherProduits();
 console.log('✅ Application démarrée');
