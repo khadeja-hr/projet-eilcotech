@@ -35,7 +35,7 @@ const PREFIXE_CATEGORIE = {
 
 const MAX_PRODUITS_PAR_MARQUE = 5;
 
-// ⚠️ NOUVELLE RÈGLE : Quantité minimum = 1
+// TEST-62 : Quantité minimum = 1 (0 interdit)
 const QUANTITE_MIN = 1;
 const QUANTITE_MAX = 10;
 
@@ -71,6 +71,43 @@ function genererReference(categorie, marque, version) {
 }
 
 // ============================================
+// TEST-63 - CALCUL DU STATUT SELON LA QUANTITÉ
+// ============================================
+
+/**
+ * Calcule le statut d'un produit selon sa quantité
+ * @param {number} quantite - La quantité en stock
+ * @returns {string} Le statut : "Rupture de stock", "Stock limité" ou "Stock disponible"
+ */
+function calculerStatut(quantite) {
+    if (quantite === 0) {
+        return 'Rupture de stock';
+    } else if (quantite >= 1 && quantite < 5) {
+        return 'Stock limité';
+    } else {
+        return 'Stock disponible';
+    }
+}
+
+/**
+ * Retourne les classes CSS (Tailwind) selon le statut
+ * @param {string} statut - Le statut du produit
+ * @returns {string} Les classes CSS
+ */
+function getClassesStatut(statut) {
+    switch (statut) {
+        case 'Rupture de stock':
+            return 'bg-red-100 text-red-800';
+        case 'Stock limité':
+            return 'bg-orange-100 text-orange-800';
+        case 'Stock disponible':
+            return 'bg-green-100 text-green-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+}
+
+// ============================================
 // US 2.1 - AJOUTER UN PRODUIT - IK (TEST-49)
 // TEST-62 : Correction bug quantité 0 (INTERDITE)
 // ============================================
@@ -83,7 +120,7 @@ function ajouterProduit(produit) {
         return { success: false, message: `❌ La référence "${produit.reference}" existe déjà !` };
     }
 
-    // ⚠️ Vérification 2 : Quantité entre 1 et 10 (0 INTERDIT)
+    // TEST-62 : Vérification 2 : Quantité entre 1 et 10 (0 INTERDIT)
     if (isNaN(produit.quantite) || produit.quantite === null || produit.quantite === undefined) {
         return { success: false, message: '❌ Veuillez saisir une quantité valide.' };
     }
@@ -107,8 +144,9 @@ function ajouterProduit(produit) {
         return { success: false, message: `❌ La marque "${produit.marque}" a déjà ${MAX_PRODUITS_PAR_MARQUE} produits (maximum autorisé).` };
     }
 
-    // ⚠️ RÈGLE : Quantité >= 1 donc TOUJOURS "Disponible"
-    produit.statut = 'Disponible';
+    // TEST-63 : Calcul du statut selon la quantité
+    // (Avec QUANTITE_MIN = 1, seul "Stock limité" ou "Stock disponible" peut s'afficher)
+    produit.statut = calculerStatut(produit.quantite);
 
     // Ajout du produit
     produits.push(produit);
@@ -189,7 +227,7 @@ document.getElementById('form-ajout').addEventListener('submit', function(e) {
         return;
     }
 
-    // ⚠️ Vérifier la quantité (0 INTERDIT)
+    // TEST-62 : Vérifier la quantité (0 INTERDIT)
     if (quantiteRaw === '') {
         afficherMessage('❌ Veuillez saisir une quantité.', 'error');
         return;
@@ -200,7 +238,6 @@ document.getElementById('form-ajout').addEventListener('submit', function(e) {
         return;
     }
 
-    // ⚠️ CORRECTION : Quantité entre 1 et 10 (0 interdit)
     if (quantite < QUANTITE_MIN || quantite > QUANTITE_MAX) {
         afficherMessage(`❌ La quantité doit être comprise entre ${QUANTITE_MIN} et ${QUANTITE_MAX}.`, 'error');
         return;
@@ -306,11 +343,8 @@ function afficherProduits(motCle = '') {
             <div onclick="afficherDetail('${produit.reference}')" class="cursor-pointer">
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="text-lg font-bold text-gray-800">${produit.nom}</h3>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${
-                        produit.statut === 'Disponible'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                    }">
+                    <!-- TEST-63 : Badge avec les bonnes couleurs -->
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${getClassesStatut(produit.statut)}">
                         ${produit.statut}
                     </span>
                 </div>
@@ -380,11 +414,8 @@ function afficherDetail(reference) {
     contenu.innerHTML = `
         <div class="flex justify-between items-start mb-4">
             <h4 class="text-2xl font-bold text-gray-800">${produit.nom}</h4>
-            <span class="px-3 py-1 rounded-full text-xs font-bold ${
-                produit.statut === 'Disponible'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-            }">
+            <!-- TEST-63 : Badge avec les bonnes couleurs -->
+            <span class="px-3 py-1 rounded-full text-xs font-bold ${getClassesStatut(produit.statut)}">
                 ${produit.statut}
             </span>
         </div>
@@ -620,7 +651,7 @@ document.getElementById('form-modification').addEventListener('submit', function
         return;
     }
 
-    // ⚠️ Vérifier la quantité (0 INTERDIT)
+    // TEST-62 : Vérifier la quantité (0 INTERDIT)
     if (quantiteRaw === '') {
         afficherMessage('❌ Veuillez saisir une quantité.', 'error');
         return;
@@ -661,6 +692,7 @@ document.getElementById('form-modification').addEventListener('submit', function
         return;
     }
 
+    // TEST-63 : Recalcul du statut selon la quantité
     produits[index] = {
         nom,
         marque,
@@ -669,7 +701,7 @@ document.getElementById('form-modification').addEventListener('submit', function
         version,
         reference,
         quantite,
-        statut: 'Disponible'
+        statut: calculerStatut(quantite)
     };
 
     saveProduits(produits);
@@ -683,4 +715,4 @@ document.getElementById('form-modification').addEventListener('submit', function
 // ============================================
 
 afficherProduits();
-console.log(' Application démarrée');
+console.log('✅ Application démarrée');
