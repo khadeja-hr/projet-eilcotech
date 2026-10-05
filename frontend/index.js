@@ -98,6 +98,31 @@ function getClassesStatut(statut) {
 }
 
 // ============================================
+// TEST-63 - RECALCUL DES STATUTS EXISTANTS
+// ============================================
+// Recalcule le statut de tous les produits au chargement
+// pour corriger les anciens statuts ('Disponible' / 'Rupture')
+// ============================================
+
+function recalculerStatutsExistants() {
+    const produits = getProduits();
+    let modifie = false;
+
+    produits.forEach(p => {
+        const nouveauStatut = calculerStatut(p.quantite);
+        if (p.statut !== nouveauStatut) {
+            p.statut = nouveauStatut;
+            modifie = true;
+        }
+    });
+
+    if (modifie) {
+        saveProduits(produits);
+        console.log('✅ Statuts recalculés pour', produits.length, 'produits');
+    }
+}
+
+// ============================================
 // US 2.1 - AJOUTER UN PRODUIT - IK (TEST-49)
 // ============================================
 
@@ -747,6 +772,9 @@ document.getElementById('form-modification').addEventListener('submit', function
 // ============================================
 // INITIALISATION
 // ============================================
+
+// TEST-63 : Recalculer les statuts AVANT d'afficher
+recalculerStatutsExistants();
 
 afficherProduits();
 console.log('✅ Application démarrée');
