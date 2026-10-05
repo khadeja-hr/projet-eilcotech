@@ -35,6 +35,10 @@ const PREFIXE_CATEGORIE = {
 
 const MAX_PRODUITS_PAR_MARQUE = 5;
 
+// ⚠️ NOUVELLE RÈGLE : Quantité minimum = 1
+const QUANTITE_MIN = 1;
+const QUANTITE_MAX = 10;
+
 function getMarquesAutorisees(categorie, sousCategorie) {
     if (categorie === 'Électroménagers') {
         return MARQUES_PAR_CATEGORIE['Électroménagers'][sousCategorie] || [];
@@ -68,24 +72,32 @@ function genererReference(categorie, marque, version) {
 
 // ============================================
 // US 2.1 - AJOUTER UN PRODUIT - IK (TEST-49)
+// TEST-62 : Correction bug quantité 0 (INTERDITE)
 // ============================================
 
 function ajouterProduit(produit) {
     const produits = getProduits();
 
+    // Vérification 1 : Unicité de la référence
     if (produits.some(p => p.reference === produit.reference)) {
         return { success: false, message: `❌ La référence "${produit.reference}" existe déjà !` };
     }
 
-    if (produit.quantite < 0 || produit.quantite > 10) {
-        return { success: false, message: '❌ La quantité doit être comprise entre 0 et 10.' };
+    // ⚠️ Vérification 2 : Quantité entre 1 et 10 (0 INTERDIT)
+    if (isNaN(produit.quantite) || produit.quantite === null || produit.quantite === undefined) {
+        return { success: false, message: '❌ Veuillez saisir une quantité valide.' };
+    }
+    if (produit.quantite < QUANTITE_MIN || produit.quantite > QUANTITE_MAX) {
+        return { success: false, message: `❌ La quantité doit être comprise entre ${QUANTITE_MIN} et ${QUANTITE_MAX}.` };
     }
 
+    // Vérification 3 : Cohérence marque/catégorie
     const marquesAutorisees = getMarquesAutorisees(produit.categorie, produit.sousCategorie);
     if (!marquesAutorisees.includes(produit.marque)) {
         return { success: false, message: `❌ La marque "${produit.marque}" n'est pas autorisée pour cette catégorie.` };
     }
 
+    // Vérification 4 : Maximum 5 produits par marque
     const nombreProduits = compterProduitsParMarque(
         produit.categorie,
         produit.sousCategorie,
@@ -95,8 +107,10 @@ function ajouterProduit(produit) {
         return { success: false, message: `❌ La marque "${produit.marque}" a déjà ${MAX_PRODUITS_PAR_MARQUE} produits (maximum autorisé).` };
     }
 
-    produit.statut = produit.quantite === 0 ? 'Rupture' : 'Disponible';
+    // ⚠️ RÈGLE : Quantité >= 1 donc TOUJOURS "Disponible"
+    produit.statut = 'Disponible';
 
+    // Ajout du produit
     produits.push(produit);
     saveProduits(produits);
 
@@ -116,7 +130,7 @@ function afficherMessage(texte, type) {
 }
 
 // ============================================
-// GESTION DYNAMIQUE DU FORMULAIRE (AJOUT) - IK
+// GESTION DYNAMIQUE DU FORMULAIRE - IK
 // ============================================
 
 const selectCategorie = document.getElementById('categorie');
@@ -154,7 +168,8 @@ function mettreAJourMarques() {
 }
 
 // ============================================
-// SOUMISSION DU FORMULAIRE - IK
+// SOUMISSION DU FORMULAIRE - IK (TEST-49)
+// TEST-62 : Correction bug quantité 0 (INTERDITE)
 // ============================================
 
 document.getElementById('form-ajout').addEventListener('submit', function(e) {
@@ -165,10 +180,29 @@ document.getElementById('form-ajout').addEventListener('submit', function(e) {
     const marque = document.getElementById('marque').value;
     const nom = document.getElementById('nom').value.trim();
     const version = document.getElementById('version').value.trim();
-    const quantite = parseInt(document.getElementById('quantite').value);
+    const quantiteRaw = document.getElementById('quantite').value;
+    const quantite = parseInt(quantiteRaw);
 
-    if (!categorie || !marque || !nom || !version || isNaN(quantite)) {
+    // Vérifier les champs texte
+    if (!categorie || !marque || !nom || !version) {
         afficherMessage('❌ Veuillez remplir tous les champs.', 'error');
+        return;
+    }
+
+    // ⚠️ Vérifier la quantité (0 INTERDIT)
+    if (quantiteRaw === '') {
+        afficherMessage('❌ Veuillez saisir une quantité.', 'error');
+        return;
+    }
+
+    if (isNaN(quantite)) {
+        afficherMessage('❌ Veuillez saisir une quantité valide.', 'error');
+        return;
+    }
+
+    // ⚠️ CORRECTION : Quantité entre 1 et 10 (0 interdit)
+    if (quantite < QUANTITE_MIN || quantite > QUANTITE_MAX) {
+        afficherMessage(`❌ La quantité doit être comprise entre ${QUANTITE_MIN} et ${QUANTITE_MAX}.`, 'error');
         return;
     }
 
@@ -209,14 +243,9 @@ function getProduitParReference(reference) {
 // TEST-57 - RECHERCHER UN PRODUIT - IK
 // ============================================
 
-/**
- * Filtre les produits selon un mot-clé (insensible à la casse)
- * Recherche dans : nom, marque, référence, catégorie, sous-catégorie
- */
 function filtrerProduits(motCle) {
     const produits = getProduits();
 
-    // Si pas de mot-clé, retourner tous les produits
     if (!motCle || motCle.trim() === '') {
         return produits;
     }
@@ -238,22 +267,17 @@ function filtrerProduits(motCle) {
     });
 }
 
-/**
- * Affiche la liste des produits (filtrée si un mot-clé est saisi)
- */
 function afficherProduits(motCle = '') {
     const produits = filtrerProduits(motCle);
     const container = document.getElementById('liste-produits');
     const compteur = document.getElementById('compteur-resultats');
 
-    // Mettre à jour le compteur
     if (motCle && motCle.trim() !== '') {
         compteur.textContent = `${produits.length} résultat(s) trouvé(s)`;
     } else {
         compteur.textContent = `${produits.length} produit(s) au total`;
     }
 
-    // Aucun produit dans le catalogue
     if (getProduits().length === 0) {
         container.innerHTML = `
             <div class="text-center text-gray-400 py-12">
@@ -265,7 +289,6 @@ function afficherProduits(motCle = '') {
         return;
     }
 
-    // Aucun résultat de recherche
     if (produits.length === 0) {
         container.innerHTML = `
             <div class="text-center text-gray-400 py-12">
@@ -277,7 +300,6 @@ function afficherProduits(motCle = '') {
         return;
     }
 
-    // Afficher les produits
     container.innerHTML = produits.map(produit => `
         <div class="border-l-4 border-primary bg-gray-50 rounded-lg p-4 hover:shadow-md transition">
 
@@ -328,7 +350,6 @@ function afficherProduits(motCle = '') {
 const champRecherche = document.getElementById('champ-recherche');
 const btnEffacerRecherche = document.getElementById('btn-effacer-recherche');
 
-// Recherche en temps réel (à chaque frappe)
 champRecherche.addEventListener('input', function() {
     const motCle = this.value;
     afficherProduits(motCle);
@@ -340,7 +361,6 @@ champRecherche.addEventListener('input', function() {
     }
 });
 
-// Bouton "effacer la recherche"
 btnEffacerRecherche.addEventListener('click', function() {
     champRecherche.value = '';
     afficherProduits('');
@@ -490,9 +510,6 @@ document.getElementById('modal-suppression').addEventListener('click', function(
 // TEST-52 - MODIFIER UN PRODUIT - FB
 // ============================================
 
-/**
- * Ouvre le modal de modification pour un produit
- */
 function ouvrirModification(reference) {
     const produit = getProduitParReference(reference);
 
@@ -501,7 +518,6 @@ function ouvrirModification(reference) {
         return;
     }
 
-    // Remplir le formulaire avec les infos actuelles
     document.getElementById('mod-reference-originale').value = produit.reference;
     document.getElementById('mod-categorie').value = produit.categorie;
     document.getElementById('mod-nom').value = produit.nom;
@@ -509,7 +525,6 @@ function ouvrirModification(reference) {
     document.getElementById('mod-reference').value = produit.reference;
     document.getElementById('mod-quantite').value = produit.quantite;
 
-    // Gérer la sous-catégorie
     const modDivSousCategorie = document.getElementById('mod-div-sous-categorie');
     const modSousCategorie = document.getElementById('mod-sousCategorie');
 
@@ -523,17 +538,12 @@ function ouvrirModification(reference) {
         modSousCategorie.value = '';
     }
 
-    // Mettre à jour les marques
     mettreAJourMarquesModification();
     document.getElementById('mod-marque').value = produit.marque;
 
-    // Afficher le modal
     document.getElementById('modal-modification').classList.remove('hidden');
 }
 
-/**
- * Met à jour les marques dans le formulaire de modification
- */
 function mettreAJourMarquesModification() {
     const categorie = document.getElementById('mod-categorie').value;
     const sousCategorie = document.getElementById('mod-sousCategorie').value;
@@ -551,14 +561,10 @@ function mettreAJourMarquesModification() {
     });
 }
 
-/**
- * Ferme le modal de modification
- */
 function fermerModalModification() {
     document.getElementById('modal-modification').classList.add('hidden');
 }
 
-// Gestion dynamique du formulaire de modification
 document.getElementById('mod-categorie').addEventListener('change', function() {
     const categorie = this.value;
     const modDivSousCategorie = document.getElementById('mod-div-sous-categorie');
@@ -577,14 +583,12 @@ document.getElementById('mod-categorie').addEventListener('change', function() {
 
 document.getElementById('mod-sousCategorie').addEventListener('change', mettreAJourMarquesModification);
 
-// Fermer le modal de modification en cliquant en dehors
 document.getElementById('modal-modification').addEventListener('click', function(e) {
     if (e.target === this) {
         fermerModalModification();
     }
 });
 
-// Fermer avec la touche Échap
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         fermerModal();
@@ -607,27 +611,36 @@ document.getElementById('form-modification').addEventListener('submit', function
     const nom = document.getElementById('mod-nom').value.trim();
     const version = document.getElementById('mod-version').value.trim();
     const reference = document.getElementById('mod-reference').value.trim();
-    const quantite = parseInt(document.getElementById('mod-quantite').value);
+    const quantiteRaw = document.getElementById('mod-quantite').value;
+    const quantite = parseInt(quantiteRaw);
 
-    // Vérifier que tous les champs sont remplis
-    if (!categorie || !marque || !nom || !version || !reference || isNaN(quantite)) {
+    // Vérifier les champs texte
+    if (!categorie || !marque || !nom || !version || !reference) {
         afficherMessage('❌ Veuillez remplir tous les champs.', 'error');
         return;
     }
 
-    // Vérifier la sous-catégorie pour électroménager
+    // ⚠️ Vérifier la quantité (0 INTERDIT)
+    if (quantiteRaw === '') {
+        afficherMessage('❌ Veuillez saisir une quantité.', 'error');
+        return;
+    }
+
+    if (isNaN(quantite)) {
+        afficherMessage('❌ Veuillez saisir une quantité valide.', 'error');
+        return;
+    }
+
+    if (quantite < QUANTITE_MIN || quantite > QUANTITE_MAX) {
+        afficherMessage(`❌ La quantité doit être comprise entre ${QUANTITE_MIN} et ${QUANTITE_MAX}.`, 'error');
+        return;
+    }
+
     if (categorie === 'Électroménagers' && !sousCategorie) {
         afficherMessage('❌ Veuillez choisir une sous-catégorie.', 'error');
         return;
     }
 
-    // Vérifier la quantité
-    if (quantite < 0 || quantite > 10) {
-        afficherMessage('❌ La quantité doit être comprise entre 0 et 10.', 'error');
-        return;
-    }
-
-    // Vérifier l'unicité de la référence (si elle a changé)
     const produits = getProduits();
     if (reference !== referenceOriginale) {
         if (produits.some(p => p.reference === reference)) {
@@ -636,21 +649,18 @@ document.getElementById('form-modification').addEventListener('submit', function
         }
     }
 
-    // Vérifier la cohérence marque/catégorie
     const marquesAutorisees = getMarquesAutorisees(categorie, sousCategorie);
     if (!marquesAutorisees.includes(marque)) {
         afficherMessage(`❌ La marque "${marque}" n'est pas autorisée pour cette catégorie.`, 'error');
         return;
     }
 
-    // Trouver le produit à modifier
     const index = produits.findIndex(p => p.reference === referenceOriginale);
     if (index === -1) {
         afficherMessage('❌ Produit introuvable.', 'error');
         return;
     }
 
-    // Mettre à jour le produit
     produits[index] = {
         nom,
         marque,
@@ -659,18 +669,12 @@ document.getElementById('form-modification').addEventListener('submit', function
         version,
         reference,
         quantite,
-        statut: quantite === 0 ? 'Rupture' : 'Disponible'
+        statut: 'Disponible'
     };
 
     saveProduits(produits);
-
-    // Fermer le modal
     fermerModalModification();
-
-    // Message de confirmation
     afficherMessage(`✅ Produit "${nom}" modifié avec succès !`, 'success');
-
-    // Actualiser la liste
     afficherProduits();
 });
 
