@@ -35,7 +35,7 @@ const PREFIXE_CATEGORIE = {
 
 const MAX_PRODUITS_PAR_MARQUE = 5;
 
-// TEST-62 : Quantité minimum = 1 (0 interdit)
+// TEST-62 : Quantité minimum = 1 (0 interdit à l'ajout)
 const QUANTITE_MIN = 1;
 const QUANTITE_MAX = 10;
 
@@ -74,11 +74,6 @@ function genererReference(categorie, marque, version) {
 // TEST-63 - CALCUL DU STATUT SELON LA QUANTITÉ
 // ============================================
 
-/**
- * Calcule le statut d'un produit selon sa quantité
- * @param {number} quantite - La quantité en stock
- * @returns {string} Le statut : "Rupture de stock", "Stock limité" ou "Stock disponible"
- */
 function calculerStatut(quantite) {
     if (quantite === 0) {
         return 'Rupture de stock';
@@ -89,11 +84,6 @@ function calculerStatut(quantite) {
     }
 }
 
-/**
- * Retourne les classes CSS (Tailwind) selon le statut
- * @param {string} statut - Le statut du produit
- * @returns {string} Les classes CSS
- */
 function getClassesStatut(statut) {
     switch (statut) {
         case 'Rupture de stock':
@@ -109,7 +99,6 @@ function getClassesStatut(statut) {
 
 // ============================================
 // US 2.1 - AJOUTER UN PRODUIT - IK (TEST-49)
-// TEST-62 : Correction bug quantité 0 (INTERDITE)
 // ============================================
 
 function ajouterProduit(produit) {
@@ -120,7 +109,7 @@ function ajouterProduit(produit) {
         return { success: false, message: `❌ La référence "${produit.reference}" existe déjà !` };
     }
 
-    // TEST-62 : Vérification 2 : Quantité entre 1 et 10 (0 INTERDIT)
+    // TEST-62 : Quantité entre 1 et 10 (0 INTERDIT)
     if (isNaN(produit.quantite) || produit.quantite === null || produit.quantite === undefined) {
         return { success: false, message: '❌ Veuillez saisir une quantité valide.' };
     }
@@ -145,10 +134,8 @@ function ajouterProduit(produit) {
     }
 
     // TEST-63 : Calcul du statut selon la quantité
-    // (Avec QUANTITE_MIN = 1, seul "Stock limité" ou "Stock disponible" peut s'afficher)
     produit.statut = calculerStatut(produit.quantite);
 
-    // Ajout du produit
     produits.push(produit);
     saveProduits(produits);
 
@@ -207,7 +194,6 @@ function mettreAJourMarques() {
 
 // ============================================
 // SOUMISSION DU FORMULAIRE - IK (TEST-49)
-// TEST-62 : Correction bug quantité 0 (INTERDITE)
 // ============================================
 
 document.getElementById('form-ajout').addEventListener('submit', function(e) {
@@ -221,13 +207,11 @@ document.getElementById('form-ajout').addEventListener('submit', function(e) {
     const quantiteRaw = document.getElementById('quantite').value;
     const quantite = parseInt(quantiteRaw);
 
-    // Vérifier les champs texte
     if (!categorie || !marque || !nom || !version) {
         afficherMessage('❌ Veuillez remplir tous les champs.', 'error');
         return;
     }
 
-    // TEST-62 : Vérifier la quantité (0 INTERDIT)
     if (quantiteRaw === '') {
         afficherMessage('❌ Veuillez saisir une quantité.', 'error');
         return;
@@ -343,7 +327,6 @@ function afficherProduits(motCle = '') {
             <div onclick="afficherDetail('${produit.reference}')" class="cursor-pointer">
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="text-lg font-bold text-gray-800">${produit.nom}</h3>
-                    <!-- TEST-63 : Badge avec les bonnes couleurs -->
                     <span class="px-3 py-1 rounded-full text-xs font-bold ${getClassesStatut(produit.statut)}">
                         ${produit.statut}
                     </span>
@@ -414,7 +397,6 @@ function afficherDetail(reference) {
     contenu.innerHTML = `
         <div class="flex justify-between items-start mb-4">
             <h4 class="text-2xl font-bold text-gray-800">${produit.nom}</h4>
-            <!-- TEST-63 : Badge avec les bonnes couleurs -->
             <span class="px-3 py-1 rounded-full text-xs font-bold ${getClassesStatut(produit.statut)}">
                 ${produit.statut}
             </span>
@@ -539,6 +521,7 @@ document.getElementById('modal-suppression').addEventListener('click', function(
 
 // ============================================
 // TEST-52 - MODIFIER UN PRODUIT - FB
+// TEST-64 : Quantité désactivée + bouton Réapprovisionner
 // ============================================
 
 function ouvrirModification(reference) {
@@ -549,13 +532,31 @@ function ouvrirModification(reference) {
         return;
     }
 
+    // Remplir les champs
     document.getElementById('mod-reference-originale').value = produit.reference;
     document.getElementById('mod-categorie').value = produit.categorie;
     document.getElementById('mod-nom').value = produit.nom;
     document.getElementById('mod-version').value = produit.version;
     document.getElementById('mod-reference').value = produit.reference;
-    document.getElementById('mod-quantite').value = produit.quantite;
 
+    // TEST-64 : Quantité TOUJOURS désactivée
+    const modQuantite = document.getElementById('mod-quantite');
+    modQuantite.value = produit.quantite;
+    modQuantite.disabled = true;
+
+    // TEST-64 : Bouton Réapprovisionner visible SEULEMENT si quantité = 0
+    const divReappro = document.getElementById('div-reapprovisionner');
+    const inputReappro = document.getElementById('mod-reapprovisionnement');
+
+    if (produit.quantite === 0) {
+        divReappro.classList.remove('hidden');
+        inputReappro.value = '';
+    } else {
+        divReappro.classList.add('hidden');
+        inputReappro.value = '';
+    }
+
+    // Gérer la sous-catégorie
     const modDivSousCategorie = document.getElementById('mod-div-sous-categorie');
     const modSousCategorie = document.getElementById('mod-sousCategorie');
 
@@ -629,7 +630,56 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
+// TEST-64 - RÉAPPROVISIONNEMENT
+// ============================================
+
+document.getElementById('btn-reapprovisionner').addEventListener('click', function() {
+    const reference = document.getElementById('mod-reference-originale').value;
+    const quantiteAAjouter = parseInt(document.getElementById('mod-reapprovisionnement').value);
+
+    if (isNaN(quantiteAAjouter) || quantiteAAjouter < 1 || quantiteAAjouter > 10) {
+        afficherMessage('❌ La quantité à ajouter doit être comprise entre 1 et 10.', 'error');
+        return;
+    }
+
+    const produits = getProduits();
+    const index = produits.findIndex(p => p.reference === reference);
+
+    if (index === -1) {
+        afficherMessage('❌ Produit introuvable.', 'error');
+        return;
+    }
+
+    const produit = produits[index];
+    const nouvelleQuantite = produit.quantite + quantiteAAjouter;
+
+    if (nouvelleQuantite > QUANTITE_MAX) {
+        afficherMessage(`❌ La quantité totale ne peut pas dépasser ${QUANTITE_MAX}. Actuellement : ${produit.quantite}.`, 'error');
+        return;
+    }
+
+    // Mettre à jour
+    produits[index].quantite = nouvelleQuantite;
+    produits[index].statut = calculerStatut(nouvelleQuantite);
+
+    saveProduits(produits);
+
+    // Mettre à jour l'affichage
+    document.getElementById('mod-quantite').value = nouvelleQuantite;
+
+    // Cacher le bouton si la quantité n'est plus 0
+    if (nouvelleQuantite > 0) {
+        document.getElementById('div-reapprovisionner').classList.add('hidden');
+    }
+
+    afficherMessage(`✅ Réapprovisionnement réussi ! Nouvelle quantité : ${nouvelleQuantite} (${produits[index].statut})`, 'success');
+
+    afficherProduits();
+});
+
+// ============================================
 // SOUMISSION DU FORMULAIRE DE MODIFICATION
+// TEST-64 : Ne touche PAS à la quantité
 // ============================================
 
 document.getElementById('form-modification').addEventListener('submit', function(e) {
@@ -642,28 +692,10 @@ document.getElementById('form-modification').addEventListener('submit', function
     const nom = document.getElementById('mod-nom').value.trim();
     const version = document.getElementById('mod-version').value.trim();
     const reference = document.getElementById('mod-reference').value.trim();
-    const quantiteRaw = document.getElementById('mod-quantite').value;
-    const quantite = parseInt(quantiteRaw);
 
     // Vérifier les champs texte
     if (!categorie || !marque || !nom || !version || !reference) {
         afficherMessage('❌ Veuillez remplir tous les champs.', 'error');
-        return;
-    }
-
-    // TEST-62 : Vérifier la quantité (0 INTERDIT)
-    if (quantiteRaw === '') {
-        afficherMessage('❌ Veuillez saisir une quantité.', 'error');
-        return;
-    }
-
-    if (isNaN(quantite)) {
-        afficherMessage('❌ Veuillez saisir une quantité valide.', 'error');
-        return;
-    }
-
-    if (quantite < QUANTITE_MIN || quantite > QUANTITE_MAX) {
-        afficherMessage(`❌ La quantité doit être comprise entre ${QUANTITE_MIN} et ${QUANTITE_MAX}.`, 'error');
         return;
     }
 
@@ -692,7 +724,9 @@ document.getElementById('form-modification').addEventListener('submit', function
         return;
     }
 
-    // TEST-63 : Recalcul du statut selon la quantité
+    // TEST-64 : Garder la quantité et le statut actuels
+    const produitExistant = produits[index];
+
     produits[index] = {
         nom,
         marque,
@@ -700,8 +734,8 @@ document.getElementById('form-modification').addEventListener('submit', function
         sousCategorie: categorie === 'Électroménagers' ? sousCategorie : null,
         version,
         reference,
-        quantite,
-        statut: calculerStatut(quantite)
+        quantite: produitExistant.quantite,  // ← Inchangée
+        statut: produitExistant.statut        // ← Inchangé
     };
 
     saveProduits(produits);
