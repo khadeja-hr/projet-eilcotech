@@ -209,7 +209,7 @@
     </div>
 
     <!-- ============================================
-         MODAL MODIFICATION (FB - TEST-52)
+         MODAL MODIFICATION (FB - TEST-52 + IK - TEST-64)
          ============================================ -->
     <div id="modal-modification" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -287,12 +287,35 @@
                                class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition font-mono">
                     </div>
 
+                    <!-- TEST-64 : Quantité DÉSACTIVÉE -->
                     <div>
                         <label for="mod-quantite" class="block text-sm font-semibold text-gray-700 mb-1">
-                            Quantité (1-10) *
+                            Quantité en stock
                         </label>
-                        <input type="number" id="mod-quantite" min="1" max="10" required
-                               class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition">
+                        <input type="number" id="mod-quantite" min="0" max="10" disabled
+                               class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed">
+                        <p class="text-xs text-gray-500 mt-1">
+                            ⚠️ La quantité ne peut pas être modifiée directement.
+                        </p>
+                    </div>
+
+                    <!-- TEST-64 : Bloc RÉAPPROVISIONNEMENT (apparaît si quantité = 0) -->
+                    <div id="div-reapprovisionner" class="hidden md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">
+                            📦 Réapprovisionnement
+                        </label>
+                        <div class="flex gap-2 items-center">
+                            <input type="number" id="mod-reapprovisionnement" min="1" max="10"
+                                   placeholder="Quantité à ajouter (1-10)"
+                                   class="flex-1 px-3 py-2 border-2 border-green-300 rounded-lg focus:border-green-500 focus:outline-none transition">
+                            <button type="button" id="btn-reapprovisionner"
+                                    class="px-6 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
+                                📦 Réapprovisionner
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Ajoutez du stock pour sortir le produit de la rupture.
+                        </p>
                     </div>
                 </div>
 
